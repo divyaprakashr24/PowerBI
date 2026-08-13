@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PBIX API Console</title>
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --bg-panel: #10192c;
+    --bg-panel-raised: #142137;
+    --grid-line: rgba(94, 234, 212, 0.055);
+    --border: #1f2c47;
+    --border-hover: #2c3d61;
+    --accent: #4fd1c5;
+    --accent-dim: #2f7d76;
+    --accent-glow: rgba(79, 209, 197, 0.18);
+    --warn: #f2a65a;
+    --error: #f87171;
+    --success: #4ade80;
+    --text: #e7ecf6;
+    --text-muted: #8b96ac;
+    --text-faint: #5c6785;
+    --mono: 'SFMono-Regular', 'JetBrains Mono', Consolas, Menlo, 'Courier New', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  body {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    padding: 40px 20px 80px;
+  }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+    padding: 5px;
+    flex-shrink: 0;
+  }
+  .brand-mark span { background: var(--accent); border-radius: 1px; opacity: 0.85; }
+  .brand-mark span:nth-child(2) { opacity: 0.5; }
+  .brand-mark span:nth-child(3) { opacity: 0.5; }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+  h1 span { color: var(--accent); }
+
+  .tagline {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+
+  .status-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    background: var(--bg-panel);
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .dot.ok { background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 1.8s infinite; }
+  .dot.bad { background: var(--error); box-shadow: 0 0 8px var(--error); }
+  .dot.pending { background: var(--warn); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ---------- Panels ---------- */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+  }
+  .panel-title .idx { color: var(--accent); }
+
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], input[type="password"], input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 11px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+  }
+  .row3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 620px) {
+    .row, .row3 { grid-template-columns: 1fr; }
+  }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+
+  button {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--accent);
+    color: #052622;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.15s, background 0.15s;
+  }
+  button:hover { box-shadow: 0 0 0 3px var(--accent-glow); }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+  button.ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  button.ghost:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  /* ---------- Drop zone ---------- */
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: var(--mono);
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+  .dropzone .big {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .dropzone .small {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  #fileInput { display: none; }
+
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-panel-raised);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    margin-top: 12px;
+    color: var(--text);
+  }
+  .file-chip .x {
+    color: var(--text-faint);
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .file-chip .x:hover { color: var(--error); }
+
+  /* ---------- Active model badge ---------- */
+  .active-model {
+    display: none;
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: var(--bg-panel-raised);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .active-model.show { display: block; }
+  .active-model .label { color: var(--text-faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .active-model .value { color: var(--accent); word-break: break-all; margin-top: 2px; }
+  .active-model .meta { color: var(--text-muted); margin-top: 6px; }
+
+  /* ---------- Endpoint tabs ---------- */
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .tab {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .tab:hover { border-color: var(--border-hover); color: var(--text); box-shadow: none; }
+  .tab.active {
+    background: var(--accent-glow);
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .endpoint-form { display: none; }
+  .endpoint-form.active { display: block; }
+
+  .endpoint-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+
+  /* ---------- Response console ---------- */
+  .console-out {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 480px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-faint);
+    margin-top: 16px;
+  }
+  .console-out.has-content { color: var(--text); }
+  .console-out .k { color: var(--accent); }
+  .console-out .s { color: #c3e88d; }
+  .console-out .n { color: #f2a65a; }
+  .console-out .b { color: #82aaff; }
+
+  .console-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+  .console-status .code.ok { color: var(--success); }
+  .console-status .code.err { color: var(--error); }
+
+  footer {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark"><span></span><span></span><span></span><span></span></div>
+      <div>
+        <h1>pbix<span>://</span>console</h1>
+        <div class="tagline">test harness for the Power BI model extraction API</div>
+      </div>
+    </div>
+    <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">not connected</span></div>
+  </header>
+
+  <!-- 1. Connection -->
+  <div class="panel">
+    <div class="panel-title"><span class="idx">01</span> connection</div>
+    <div class="row">
+      <div class="field">
+        <label for="baseUrl">API base URL</label>
+        <input type="text" id="baseUrl" placeholder="https://powerbi-27lz.onrender.com" value="https://powerbi-27lz.onrender.com" />
+      </div>
+      <div class="field">
+        <label for="apiKey">x-api-key</label>
+        <input type="password" id="apiKey" placeholder="dev-local-key" value="dev-local-key" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button onclick="checkHealth()">Check health</button>
+    </div>
+  </div>
+
+  <!-- 2. Upload -->
+  <div class="panel">
+    <div class="panel-title"><span class="idx">02</span> upload model</div>
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+      <div class="big">Drop a .pbix file here, or click to browse</div>
+      <div class="small">Extracts tables, columns, relationships, measures &amp; sample data</div>
+    </div>
+    <input type="file" id="fileInput" accept=".pbix" />
+    <div id="fileChipHolder"></div>
+    <div class="btn-row">
+      <button id="uploadBtn" onclick="uploadModel()" disabled>Upload &amp; extract</button>
+      <button class="ghost" onclick="listModels()">List cached models</button>
+    </div>
+    <div class="active-model" id="activeModel">
+      <div class="label">active model_id</div>
+      <div class="value" id="activeModelId">—</div>
+      <div class="meta" id="activeModelMeta"></div>
+    </div>
+  </div>
+
+  <!-- 3. Query -->
+  <div class="panel">
+    <div class="panel-title"><span class="idx">03</span> query endpoints</div>
+    <div class="tabs" id="tabs"></div>
+
+    <div class="endpoint-form active" data-form="tables">
+      <div class="endpoint-note">GET /models/{id}/tables — list all table names</div>
+      <div class="btn-row"><button onclick="runTables()">Run</button></div>
+    </div>
+
+    <div class="endpoint-form" data-form="schema">
+      <div class="endpoint-note">GET /models/{id}/schema — every table + column + data type</div>
+      <div class="btn-row"><button onclick="runSchema()">Run</button></div>
+    </div>
+
+    <div class="endpoint-form" data-form="relationships">
+      <div class="endpoint-note">GET /models/{id}/relationships — cardinality &amp; active/inactive links</div>
+      <div class="btn-row"><button onclick="runRelationships()">Run</button></div>
+    </div>
+
+    <div class="endpoint-form" data-form="measures">
+      <div class="endpoint-note">GET /models/{id}/measures — all DAX measures + expressions</div>
+      <div class="btn-row"><button onclick="runMeasures()">Run</button></div>
+    </div>
+
+    <div class="endpoint-form" data-form="sample">
+      <div class="endpoint-note">GET /models/{id}/sample/{table} — sample data rows from one table</div>
+      <div class="row">
+        <div class="field">
+          <label for="sampleTable">Table name</label>
+          <input type="text" id="sampleTable" placeholder="e.g. Sales" />
+        </div>
+        <div class="field">
+          <label for="sampleRows">Rows</label>
+          <input type="number" id="sampleRows" value="10" min="1" max="200" />
+        </div>
+      </div>
+      <div class="btn-row"><button onclick="runSample()">Run</button></div>
+    </div>
+
+    <div class="endpoint-form" data-form="full">
+      <div class="endpoint-note">GET /models/{id}/full — everything in one call</div>
+      <div class="row">
+        <div class="field">
+          <label for="fullFormat">Format</label>
+          <input type="text" id="fullFormat" value="json" placeholder="json or markdown" />
+        </div>
+        <div class="field">
+          <label for="fullSampleRows">Sample rows per table</label>
+          <input type="number" id="fullSampleRows" value="5" min="0" max="50" />
+        </div>
+      </div>
+      <div class="btn-row"><button onclick="runFull()">Run</button></div>
+    </div>
+
+    <div class="console-out" id="consoleOut">// response will appear here</div>
+    <div class="console-status">
+      <span id="consoleTiming"></span>
+      <span class="code" id="consoleCode"></span>
+    </div>
+  </div>
+
+</div>
+
+<footer>local test console · no data leaves your browser except calls to the base URL above</footer>
+
+<script>
+  let activeModelId = null;
+  let selectedFile = null;
+
+  const tabDefs = [
+    { key: 'tables', label: 'tables' },
+    { key: 'schema', label: 'schema' },
+    { key: 'relationships', label: 'relationships' },
+    { key: 'measures', label: 'measures' },
+    { key: 'sample', label: 'sample data' },
+    { key: 'full', label: 'full extract' },
+  ];
+  const tabsEl = document.getElementById('tabs');
+  tabDefs.forEach((t, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (i === 0 ? ' active' : '');
+    btn.textContent = t.label;
+    btn.onclick = () => switchTab(t.key);
+    btn.dataset.key = t.key;
+    tabsEl.appendChild(btn);
+  });
+
+  function switchTab(key) {
+    document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.key === key));
+    document.querySelectorAll('.endpoint-form').forEach(el => el.classList.toggle('active', el.dataset.form === key));
+  }
+
+  function baseUrl() {
+    return document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+  }
+  function apiKey() {
+    return document.getElementById('apiKey').value.trim();
+  }
+
+  function setStatus(state, text) {
+    const dot = document.getElementById('statusDot');
+    const label = document.getElementById('statusText');
+    dot.className = 'dot ' + state;
+    label.textContent = text;
+  }
+
+  async function checkHealth() {
+    setStatus('pending', 'checking…');
+    try {
+      const start = performance.now();
+      const res = await fetch(baseUrl() + '/health');
+      const ms = Math.round(performance.now() - start);
+      const data = await res.json();
+      if (res.ok) {
+        setStatus('ok', `online · ${data.models_loaded} model(s) cached · ${ms}ms`);
+      } else {
+        setStatus('bad', 'unreachable');
+      }
+      renderResponse(data, res.status, ms);
+    } catch (e) {
+      setStatus('bad', 'unreachable');
+      renderResponse({ error: String(e) }, null, null);
+    }
+  }
+
+  // ---------- Upload ----------
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const fileChipHolder = document.getElementById('fileChipHolder');
+
+  ['dragover', 'dragenter'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); })
+  );
+  ['dragleave', 'drop'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); })
+  );
+  dropzone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  function setFile(f) {
+    if (!f.name.toLowerCase().endsWith('.pbix')) {
+      alert('Please select a .pbix file.');
+      return;
+    }
+    selectedFile = f;
+    uploadBtn.disabled = false;
+    fileChipHolder.innerHTML = `<div class="file-chip">📄 ${f.name} <span class="x" onclick="clearFile()">✕</span></div>`;
+  }
+  function clearFile() {
+    selectedFile = null;
+    uploadBtn.disabled = true;
+    fileChipHolder.innerHTML = '';
+    fileInput.value = '';
+  }
+
+  async function uploadModel() {
+    if (!selectedFile) return;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading…';
+    const form = new FormData();
+    form.append('file', selectedFile);
+    try {
+      const start = performance.now();
+      const res = await fetch(baseUrl() + '/models/upload', {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey() },
+        body: form,
+      });
+      const ms = Math.round(performance.now() - start);
+      const data = await res.json();
+      renderResponse(data, res.status, ms);
+      if (res.ok && data.model_id) {
+        activeModelId = data.model_id;
+        document.getElementById('activeModel').classList.add('show');
+        document.getElementById('activeModelId').textContent = activeModelId;
+        document.getElementById('activeModelMeta').textContent =
+          `${data.file_name} · ${data.table_count} table(s)`;
+      }
+    } catch (e) {
+      renderResponse({ error: String(e) }, null, null);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload & extract';
+    }
+  }
+
+  async function listModels() {
+    await call('/models', {}, 'GET');
+  }
+
+  // ---------- Query endpoints ----------
+  function requireModel() {
+    if (!activeModelId) {
+      alert('Upload a .pbix file first (or paste a model_id into the active model box via list cached models).');
+      return false;
+    }
+    return true;
+  }
+
+  async function runTables() {
+    if (!requireModel()) return;
+    await call(`/models/${activeModelId}/tables`);
+  }
+  async function runSchema() {
+    if (!requireModel()) return;
+    await call(`/models/${activeModelId}/schema`);
+  }
+  async function runRelationships() {
+    if (!requireModel()) return;
+    await call(`/models/${activeModelId}/relationships`);
+  }
+  async function runMeasures() {
+    if (!requireModel()) return;
+    await call(`/models/${activeModelId}/measures`);
+  }
+  async function runSample() {
+    if (!requireModel()) return;
+    const table = document.getElementById('sampleTable').value.trim();
+    const rows = document.getElementById('sampleRows').value || 10;
+    if (!table) { alert('Enter a table name.'); return; }
+    await call(`/models/${activeModelId}/sample/${encodeURIComponent(table)}?rows=${rows}`);
+  }
+  async function runFull() {
+    if (!requireModel()) return;
+    const format = document.getElementById('fullFormat').value.trim() || 'json';
+    const sampleRows = document.getElementById('fullSampleRows').value || 5;
+    await call(`/models/${activeModelId}/full?format=${format}&sample_rows=${sampleRows}`, {}, 'GET', format === 'markdown');
+  }
+
+  async function call(path, opts = {}, method = 'GET', isText = false) {
+    try {
+      const start = performance.now();
+      const res = await fetch(baseUrl() + path, {
+        method,
+        headers: { 'x-api-key': apiKey() },
+        ...opts,
+      });
+      const ms = Math.round(performance.now() - start);
+      const data = isText ? await res.text() : await res.json();
+      renderResponse(data, res.status, ms, isText);
+    } catch (e) {
+      renderResponse({ error: String(e) }, null, null);
+    }
+  }
+
+  // ---------- Response rendering ----------
+  function syntaxHighlight(json) {
+    const str = typeof json === 'string' ? json : JSON.stringify(json, null, 2);
+    return str
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d*)?([eE][+-]?\d+)?)/g,
+        match => {
+          let cls = 'n';
+          if (/^"/.test(match)) cls = /:$/.test(match) ? 'k' : 's';
+          else if (/true|false/.test(match)) cls = 'b';
+          return `<span class="${cls}">${match}</span>`;
+        });
+  }
+
+  function renderResponse(data, status, ms, isText = false) {
+    const out = document.getElementById('consoleOut');
+    out.classList.add('has-content');
+    out.innerHTML = isText ? escapeHtml(data) : syntaxHighlight(data);
+
+    const codeEl = document.getElementById('consoleCode');
+    const timingEl = document.getElementById('consoleTiming');
+    timingEl.textContent = ms !== null ? `${ms}ms` : '';
+    if (status) {
+      codeEl.textContent = `HTTP ${status}`;
+      codeEl.className = 'code ' + (status < 400 ? 'ok' : 'err');
+    } else {
+      codeEl.textContent = 'network error';
+      codeEl.className = 'code err';
+    }
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+</script>
+
+</body>
+</html>
