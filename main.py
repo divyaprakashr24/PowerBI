@@ -28,7 +28,7 @@ from typing import Dict, Optional
 
 from fastapi import FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 
 from extractor import PBIXExtractor
 
@@ -77,9 +77,34 @@ def _get_extractor(model_id: str) -> PBIXExtractor:
 # Health
 # ---------------------------------------------------------------------------
 
+@app.get("/", summary="Root - basic service info")
+def root():
+    return {
+        "service": "Power BI Model Extraction API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health", summary="Health check")
 def health():
     return {"status": "ok", "models_loaded": len(MODEL_STORE)}
+
+
+@app.get("/console", response_class=HTMLResponse, summary="Serve the test console UI")
+def console():
+    """
+    Serves console.html from the same origin as the API itself, so fetch()
+    calls from the page are same-origin and never hit CORS restrictions.
+    Opening console.html directly via file:// triggers browsers to block
+    outgoing fetch requests entirely (silent failure, nothing reaches the
+    server) — visiting this route instead sidesteps that completely.
+    """
+    console_path = os.path.join(os.path.dirname(__file__), "console.html")
+    if not os.path.exists(console_path):
+        raise HTTPException(status_code=404, detail="console.html not found next to main.py on the server.")
+    with open(console_path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 # ---------------------------------------------------------------------------
